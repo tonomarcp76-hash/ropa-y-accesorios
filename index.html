@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👗 Tienda de Ropa - Sistema POS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: #fff5f8; color: #333; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; width: 100%; }
+        header { background: #d81b60; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
+        .header-usuario { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .btn-salir { background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .btn-salir:hover { background: #a01a1a; }
+        nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        nav button { background: #ec407a; font-size: 14px; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        nav button.activo { background: #ad1457; border: 2px solid #f8bbd0; }
+        .seccion { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { color: #d81b60; margin-bottom: 15px; border-bottom: 2px solid #f8bbd0; padding-bottom: 8px; }
+        button:hover { background: #c2185b; }
+        button.rojo { background: #e53935; }
+        button.rojo:hover { background: #c62828; }
+        button.verde { background: #2e7d32; }
+        button.verde:hover { background: #1b5e20; }
+        button.naranja { background: #fb8c00; }
+        button.naranja:hover { background: #ef6c00; }
+        input, select, textarea { padding: 10px; border: 1px solid #f48fb1; border-radius: 5px; margin: 5px; width: 100%; max-width: 380px; font-size: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .producto { background: #fce4ec; padding: 12px; border-radius: 8px; border-left: 4px solid #ec407a; }
+        .producto.vestir { border-left-color: #8e24aa; background: #f3e5f5; }
+        .producto.deportiva { border-left-color: #ff6f00; background: #fff3e0; }
+        .producto.accesorios { border-left-color: #00897b; background: #e0f2f1; }
+        .producto.calzado { border-left-color: #455a64; background: #eceff1; }
+        .producto.agotado { opacity: 0.6; border: 2px dashed #c62828; }
+        .carrito-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #ccc; flex-wrap: wrap; gap: 8px; }
+        .total { font-size: 22px; font-weight: bold; text-align: right; margin-top: 15px; color: #d81b60; }
+        .ticket { background: #fff; border: 1px dashed #888; padding: 20px; margin-top: 20px; font-family: monospace; font-size: 13px; display: none; }
+        .fila-ticket { display: flex; justify-content: space-between; padding: 2px 0; }
+        .oculto { display: none !important; }
+        .mensaje { padding: 10px; border-radius: 5px; margin: 10px 0; display: none; max-width: 380px; }
+        .exito { background: #d4edda; color: #155724; display: block; }
+        .error { background: #f8d7da; color: #721c24; display: block; }
+        .aviso { background: #fff3cd; color: #856404; display: block; }
+        .tabla { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .tabla th, .tabla td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        .tabla th { background: #f8bbd0; color: #ad1457; }
+        .resumen-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .caja-card { background: #fce4ec; padding: 15px; border-radius: 8px; text-align: center; }
+        .caja-card h3 { font-size: 14px; color: #d81b60; margin-bottom: 5px; }
+        .caja-card .valor { font-size: 24px; font-weight: bold; }
+        .fecha-filtro { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal.activo { display: flex; }
+        .modal-contenido { background: white; padding: 25px; border-radius: 10px; max-width: 550px; width: 95%; position: relative; max-height: 90vh; overflow-y: auto; }
+        .cerrar-modal { position: absolute; right: 15px; top: 10px; font-size: 24px; cursor: pointer; color: #888; }
+        .cerrar-modal:hover { color: #000; }
+        .btn-agregar { background: #f8bbd0; color: #ad1457; padding: 5px 10px; font-size: 13px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-quitar { background: #e53935; padding: 2px 8px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; color: white; }
+        .agotado { color: #c62828; font-weight: bold; }
+        .talla-badge { display: inline-block; background: #f48fb1; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; }
+        
+        .login-pantalla { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-caja { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 100%; max-width: 420px; }
+        .login-caja h2 { text-align: center; border: none; }
+        .login-caja button { width: 100%; margin-top: 10px; }
+        .enlace { background: none; border: none; color: #d81b60; cursor: pointer; text-decoration: underline; padding: 0; margin-top: 15px; }
+        .enlace:hover { color: #ad1457; background: none; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            .ticket, .ticket * { visibility: visible; }
+            .ticket { position: absolute; left: 0; top: 0; width: 80%; max-width: 320px; margin: 0 auto; border: none; }
+            .ticket button { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="pantalla-login" class="login-pantalla">
+    <div class="login-caja">
+        <h2>👗 Tienda de Ropa - POS</h2>
+        <p style="text-align:center; color:#666; margin-bottom:20px;">Control de Ventas e Inventario</p>
+        
+        <div id="form-login">
+            <div>
+                <label><strong>Usuario:</strong></label><br>
+                <input type="text" id="usuario" placeholder="Tu usuario">
+            </div>
+            <div>
+                <label><strong>Contraseña:</strong></label><br>
+                <input type="password" id="clave" placeholder="Tu contraseña">
+            </div>
+            <div id="msg-login" class="mensaje"></div>
+            <br>
+            <button onclick="iniciarSesion()" class="verde">✅ Entrar</button>
+            <p style="text-align:center;">¿No tienes cuenta? <button class="enlace" onclick="mostrarRegistro()">Regístrate aquí</button></p>
+        </div>
+        
+        <div id="form-registro" class="oculto">
+            <h3 style="text-align:center; margin-bottom:15px;">📝 Nuevo Usuario</h3>
+            <div>
+                <label><strong>Nombre Completo:</strong></label><br>
+                <input type="text" id="reg-nombre" placeholder="Nombre completo">
+            </div>
+            <div>
+                <label><strong>Usuario:</strong></label><br>
+                <input type="text" id="reg-usuario" placeholder="Nombre de usuario">
+            </div>
+            <div>
+                <label><strong>Contraseña:</strong></label><br>
+                <input type="password" id="reg-clave" placeholder="Contraseña">
+            </div>
+            <div id="msg-registro" class="mensaje"></div>
+            <br>
+            <button onclick="registrarUsuario()" class="verde">✅ Crear Cuenta</button>
+            <p style="text-align:center;">¿Ya tienes cuenta? <button class="enlace" onclick="mostrarLogin()">Inicia sesión</button></p>
+        </div>
+    </div>
+</div>
+
+<div id="sistema" class="oculto">
+    <header class="header-usuario">
+        <div>
+            <h1>👗 TIENDA DE ROPA Y ACCESORIOS — PUNTO DE VENTA</h1>
+            <p>Bienvenido, <span id="nombre-usuario"></span> 👋</p>
+        </div>
+        <button class="btn-salir" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
+    </header>
+
+    <div class="container">
+        <nav>
+            <button id="btn-ventas" class="activo" onclick="mostrarSeccion('ventas')">🛒 Ventas</button>
+            <button id="btn-historial" onclick="mostrarSeccion('historial')">📊 Historial</button>
+            <button id="btn-caja" onclick="mostrarSeccion('caja')">💰 Cierre de Caja</button>
+            <button id="btn-inventario" onclick="mostrarSeccion('inventario')">📦 Inventario</button>
+            <button id="btn-nuevo-producto" onclick="mostrarSeccion('nuevo-producto')">➕ Nueva Prenda</button>
+            <button id="btn-alertas" onclick="mostrarSeccion('alertas')">⚠️ Alertas</button>
+        </nav>
+
+        <!-- VENTAS -->
+        <div id="sec-ventas" class="seccion">
+            <h2>👗 Prendas y Productos</h2>
+            <div style="margin-bottom:15px;">
+                <input type="text" id="buscar-producto" placeholder="🔍 Buscar por nombre, marca, color o código..." oninput="filtrarProductos()">
+            </div>
+            <div style="margin-bottom:15px;">
+                <select id="filtro-categoria" onchange="filtrarProductos()">
+                    <option value="">Todas las categorías</option>
+                    <option value="vestir">👔 Ropa de Vestir</option>
+                    <option value="deportiva">🏃 Ropa Deportiva</option>
+                    <option value="accesorios">👜 Accesorios</option>
+                    <option value="calzado">👟 Calzado</option>
+                </select>
+            </div>
+            <div id="sin-productos" style="color:#888; padding:20px; text-align:center;">
+                No hay productos registrados.<br>Ve a "Nueva Prenda" para agregar los tuyos.
+            </div>
+            <div class="grid" id="lista-productos"></div>
+
+            <h2 style="margin-top:30px;">🛒 Carrito de Venta</h2>
+            <div id="carrito-vacio" style="color:#888; padding:15px; text-align:center;">El carrito está vacío. Agrega productos para empezar.</div>
+            <div id="items-carrito"></div>
+            <div class="total">Total: $<span id="total">0.00</span></div>
+            <br>
+            <button onclick="limpiarCarrito()" class="rojo">🗑️ Cancelar Venta</button>
+            <button onclick="abrirModalPago()">💳 Cobrar</button>
+
+            <div class="ticket" id="ticket">
+                <h3 style="text-align:center;">👗 TIENDA DE ROPA</h3>
+                <p style="text-align:center;">Dirección<br>Teléfono</p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p>Ticket Nº: <span id="t-num"></span></p>
+                <p>Fecha: <span id="t-fecha"></span></p>
+                <p>Vendedor: <span id="t-cajero"></span></p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <div id="t-items"></div>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p class="fila-ticket"><strong>TOTAL: $<span id="t-total"></span></strong></p>
+                <p class="fila-ticket">Pago: $<span id="t-pago"></span></p>
+                <p class="fila-ticket">Cambio: $<span id="t-cambio"></span></p>
+                <hr style="border:1px dashed #999; margin:10px 0;">
+                <p style="text-align:center;">* Cambios y devoluciones en 7 días con ticket *<br>¡Gracias por tu compra!</p>
+                <br>
+                <button onclick="window.print()">🖨️ Imprimir Ticket</button>
+            </div>
+        </div>
+
+        <!-- MODAL CANTIDAD/TALLA -->
+        <div id="modal-cantidad" class="modal">
+            <div class="modal-contenido">
+                <span class="cerrar-modal" onclick="cerrarModalCantidad()">&times;</span>
+                <h3 id="prod-nombre"></h3>
+                <p style="font-size:13px; color:#666;" id="prod-marca"></p>
+                <p style="font-size:13px;" id="prod-color"></p>
+                <p>Precio: $<span id="prod-precio"></span></p>
+                <p>Disponible: <span id="prod-stock"></span> unidades</p>
+                <div>
+                    <label><strong>Talla:</strong></label><br>
+                    <select id="prod-talla" onchange="actualizarStockTalla()">
+                        <option value="">Selecciona talla</option>
+                    </select>
+                </div>
+                <div>
+                    <label><strong>Cantidad:</strong></label><br>
+                    <input type="number" min="1" id="cantidad-ingresada" placeholder="1" oninput="calcularSubtotal()">
+                </div>
+                <p style="font-size:18px; margin-top:10px;">Subtotal: <strong>$<span id="subtotal-calculado">0.00</span></strong></p>
+                <br>
+                <button onclick="confirmarAgregar()" class="verde">✅ Agregar</button>
+                <button onclick="cerrarModalCantidad()">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL PAGO -->
+        <div id="modal-pago" class="modal">
+            <div class="modal-contenido">
+                <span class="cerrar-modal" onclick="cerrarModalPago()">&times;</span>
+                <h2>💰 Pago</h2>
+                <p style="font-size:18px; margin:15px 0;">Total: <strong>$<span id="modal-total"></span></strong></p>
+                <div>
+                    <label><strong>Recibido del cliente:</strong></label><br>
+                    <input type="number" step="0.01" id="pago-recibido" placeholder="0.00" oninput="calcularCambio()">
+                </div>
+                <p style="font-size:16px; margin-top:15px;">Cambio: <strong>$<span id="pago-cambio">0.00</span></strong></p>
+                <br>
+                <button onclick="confirmarVenta()" class="verde">✅ Confirmar Venta</button>
+                <button onclick="cerrarModalPago()">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="sec-historial" class="seccion oculto">
+            <h2>📊 Historial de Ventas</h2>
+            <div class="fecha-filtro">
+                <label>Desde:</label>
+                <input type="date" id="fecha-desde">
+                <label>Hasta:</label>
+                <input type="date" id="fecha-hasta">
+                <button onclick="filtrarHistorial()">🔍 Filtrar</button>
+                <button onclick="verTodoHistorial()">📋 Ver Todo</button>
+            </div>
+            <
+            <div id="historial-vacio" style="text-align:center; padding:30px; color:#888;">No hay ventas registradas</div>
+            <table class="tabla" id="tabla-historial" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Ticket</th>
+                        <th>Fecha</th>
+                        <th>Vendedor</th>
+                        <th>Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-historial"></tbody>
+            </table>
+        </div>
+
+        <!-- CAJA -->
+        <div id="sec-caja" class="seccion oculto">
+            <h2>💰 Cierre de Caja</h2>
+            <div class="resumen-caja">
+                <div class="caja-card">
+                    <h3>Ventas del Día</h3>
+                    <div class="valor" id="caja-ventas">0</div>
+                </div>
+                <div class="caja-card">
+                    <h3>Total en Caja</h3>
+                    <div class="valor" id="caja-total">$0.00</div>
+                </div>
+                <div class="caja-card">
+                    <h3>Fecha</h3>
+                    <div class="valor" id="caja-fecha" style="font-size:16px;"></div>
+                </div>
+            </div>
+            <br>
+            <button onclick="cerrarCaja()" class="rojo">🔄 Cerrar Caja</button>
+            <button onclick="exportarReporte()">📄 Exportar Reporte</button>
+        </div>
+
+        <!-- INVENTARIO -->
+        <div id="sec-inventario" class="seccion oculto">
+            <h2>📦 Inventario de Prendas</h2>
+            <div style="margin-bottom:15px;">
+                <input type="text" id="buscar-inv" placeholder="🔍 Buscar por nombre, marca o color..." oninput="filtrarInventario()">
+            </div>
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>Prenda</th>
+                        <th>Marca / Color</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Tallas / Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inv-cuerpo"></tbody>
+            </table>
+        </div>
+
+        <!-- NUEVO PRODUCTO -->
+        <div id="sec-nuevo-producto" class="seccion oculto">
+            <h2>➕ Agregar Nueva Prenda</h2>
+            <div>
+                <label><strong>Nombre de la Prenda:</strong></label><br>
+                <input type="text" id="prod-nom" placeholder="Ej: Blusa de Seda, Pantalón Mezclilla...">
+            </div>
+            <div>
+                <label><strong>Marca:</strong></label><br>
+                <input type="text" id="prod-marca" placeholder="Ej: Zara, Levi's...">
+            </div>
+            <div>
+                <label><strong>Color:</strong></label><br>
+                <input type="text" id="prod-color" placeholder="Ej: Rojo, Azul Marino...">
+            </div>
+            <div>
+                <label><strong>Categoría:</strong></label><br>
+                <select id="prod-cat">
+                    <option value="">Selecciona</option>
+                    <option value="vestir">👔 Ropa de Vestir</option>
+                    <option value="deportiva">🏃 Ropa Deportiva</option>
+                    <option value="accesorios">👜 Accesorios</option>
+                    <option value="calzado">👟 Calzado</option>
+                </select>
+            </div>
+            <div>
+                <label><strong>Precio de Venta:</strong></label><br>
+                <input type="number" step="0.01" id="prod-prec" placeholder="0.00">
+            </div>
+            <h3 style="margin:15px 0 5px;">📏 Stock por Talla</h3>
+            <div id="tallas-container">
+                <div class="talla-linea">
+                    <label>Talla:</label>
+                    <input type="text" class="talla-nombre" placeholder="XS, S, M, L, XL...">
+                    <label>Stock:</label>
+                    <input type="number" class="talla-stock" placeholder="0" style="max-width:100px;">
+                    <button type="button" onclick="this.parentElement.remove()" class="btn-quitar">−</button>
+                </div>
+            </div>
+            <button type="button" onclick="agregarFilaTalla()" style="margin:8px 0;">➕ Agregar otra talla</button>
+            <div id="msg-prod" class="mensaje"></div>
+            <br>
+            <button onclick="guardarProducto()" class="verde">💾 Guardar Prenda</button>
+            <button onclick="limpiarFormulario()">🗑️ Limpiar</button>
+        </div>
+
+        <!-- ALERTAS -->
+        <div id="sec-alertas" class="seccion oculto">
+            <h2>⚠️ Alertas de Inventario</h2>
+            <h3 style="color:#c62828; margin:15px 0 5px;">📉 Stock Bajo (menos de 3 unidades)</h3>
+            <div id="alert-stock" style="color:#888; padding:10px 0;">Sin alertas</div>
+            
+            <h3 style="color:#f57c00; margin:25px 0 5px;">🏷️ Prendas con Stock Mínimo</h3>
+            <div id="alert-tallas" style="color:#888; padding:10px 0;">Sin alertas</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let productos = JSON.parse(localStorage.getItem('productosRopa')) || [];
+let carrito = [];
+let ventas = JSON.parse(localStorage.getItem('ventasRopa')) || [];
+let usuarios = JSON.parse(localStorage.getItem('usuariosRopa')) || [];
+let usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivoRopa')) || null;
+let prodActual = null;
+
+// === AUTENTICACIÓN ===
+function mostrarRegistro() {
+    document.getElementById('form-login').classList.add('oculto');
+    document.getElementById('form-registro').classList.remove('oculto');
+    limpiarMensajes();
+}
+
+function mostrarLogin() {
+    document.getElementById('form-registro').classList.add('oculto');
+    document.getElementById('form-login').classList.remove('oculto');
+    limpiarMensajes();
+}
+
+function limpiarMensajes() {
+    ['msg-login','msg-registro','msg-prod'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.className = 'mensaje'; el.textContent = ''; }
+    });
+}
+
+function registrarUsuario() {
+    const nombre = document.getElementById('reg-nombre').value.trim();
+    const usr = document.getElementById('reg-usuario').value.trim();
+    const clave = document.getElementById('reg-clave').value;
+    const msg = document.getElementById('msg-registro');
+
+    if (!nombre || !usr || !clave) {
+        msg.textContent = '⚠️ Completa todos los campos';
+        msg.className = 'mensaje error';
+        return;
+    }
+    if (usuarios.find(u => u.usuario === usr)) {
+        msg.textContent = '❌ El usuario ya existe';
+        msg.className = 'mensaje error';
+        return;
+    }
+
+    usuarios.push({ nombre, usuario: usr, clave });
+    localStorage.setItem('usuariosRopa', JSON.stringify(usuarios));
+    msg.textContent = '✅ Cuenta creada. Inicia sesión.';
+    msg.className = 'mensaje exito';
+    setTimeout(mostrarLogin, 1500);
+}
+
+function iniciarSesion() {
+    const usr = document.getElementById('usuario').value.trim();
+    const clave = document.getElementById('clave').value;
+    const encontrado = usuarios.find(u => u.usuario === usr && u.clave === clave);
+    
+    if (encontrado) {
+        usuarioActivo = encontrado;
+        localStorage.setItem('usuarioActivoRopa', JSON.stringify(usuarioActivo));
+        document.getElementById('pantalla-login').classList.add('oculto');
+        document.getElementById('sistema').classList.remove('oculto');
+        document.getElementById('nombre-usuario').textContent = encontrado.nombre;
+        cargarProductos();
+        actualizarCaja();
+    } else {
+        const msg = document.getElementById('msg-login');
+        msg.textContent = '❌ Datos incorrectos';
+        msg.className = 'mensaje error';
+    }
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('usuarioActivoRopa');
+    usuarioActivo = null; carrito = [];
+    document.getElementById('sistema').classList.add('oculto');
+    document.getElementById('pantalla-login').classList.remove('oculto');
+}
+
+// === NAVEGACIÓN ===
+function mostrarSeccion(nombre) {
+    document.querySelectorAll('.seccion').forEach(s => s.classList.add('oculto'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('activo'));
+    document.getElementById(`sec-${nombre}`).classList.remove('oculto');
+    document.getElementById(`btn-${nombre}`).classList.add('activo');
+    
+    if (nombre === 'inventario') cargarInventario();
+    if (nombre === 'historial') cargarHistorial();
+    if (nombre === 'alertas') cargarAlertas();
+}
+
+// === TALLAS ===
+function agregarFilaTalla() {
+    const container = document.getElementById('tallas-container');
+    const linea = document.createElement('div');
+    linea.className = 'talla-linea';
+    linea.innerHTML = `
+        <label>Talla:</label>
+        <input type="text" class="talla-nombre" placeholder="XS, S, M, L...">
+        <label>Stock:</label>
+        <input type="number" class="talla-stock" placeholder="0" style="max-width:100px;">
+        <button type="button" onclick="this.parentElement.remove()" class="btn-quitar">−</button>
+    `;
+    container.appendChild(linea);
+}
+
+function leerTallas() {
+    const lineas = document.querySelectorAll('#tallas-container .talla-linea');
+    const tallas = [];
+    lineas.forEach(l => {
+        const nom = l.querySelector('.talla-nombre').value.trim();
+        const stk = parseInt(l.querySelector('.talla-stock').value) || 0;
+        if (nom) tallas.push({ talla: nom, stock: stk });
+    });
+    return tallas;
+}
+
+function limpiarTallas() {
+    const container = document.getElementById('tallas-container');
+    container.innerHTML = `
+        <div class="talla-linea">
+            <label>Talla:</label>
+            <input type="text" class="talla-nombre" placeholder="XS, S, M, L, XL...">
+            <label>Stock:</label>
+            <input type="number" class="talla-stock" placeholder="0" style="max-width:100px;">
+            <button type="button" onclick="this.parentElement.remove()" class="btn-quitar">−</button>
+        </div>
+    `;
+}
+
+// === PRODUCTOS ===
+function guardarProducto() {
+    const tallas = leerTallas();
+    const totalStock = tallas.reduce((s, t) => s + t.stock, 0);
+    
+    const datos = {
+        id: Date.now(),
+        nombre: document.getElementById('prod-nom').value.trim(),
+        marca: document.getElementById('prod-marca').value.trim(),
+        color: document.getElementById('prod-color').value.trim(),
+        categoria: document.getElementById('prod-cat').value,
+        precio: parseFloat(document.getElementById('prod-prec').value),
+        tallas: tallas,
+        stock: totalStock
+    };
+    const msg = document.getElementById('msg-prod');
+
+    if (!datos.nombre || !datos.categoria || isNaN(datos.precio) || tallas.length === 0) {
+        msg.textContent = '⚠️ Completa nombre, categoría, precio y al menos una talla';
+        msg.className = 'mensaje error';
+        return;
+    }
+
+    productos.push(datos);
+    localStorage.setItem('productosRopa', JSON.stringify(productos));
+    msg.textContent = '✅ Prenda guardada';
+    msg.className = 'mensaje exito';
+    limpiarFormulario();
+    setTimeout(() => msg.className = 'mensaje', 2500);
+}
+
+function limpiarFormulario() {
+    ['prod-nom','prod-marca','prod-color','prod-prec'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('prod-cat').value = '';
+    limpiarTallas();
+    limpiarMensajes();
+}
+
+function cargarProductos(lista = productos) {
+    const cont = document.getElementById('lista-productos');
+    const vacio = document.getElementById('sin-productos');
+    const catFiltro = document.getElementById('filtro-categoria').value;
+    const busq = document.getElementById('buscar-producto').value.toLowerCase();
+
+    let filtrados = lista;
+    if (catFiltro) filtrados = filtrados.filter(p => p.categoria === catFiltro);
+    if (busq) filtrados = filtrados.filter(p => 
+        p.nombre.toLowerCase().includes(busq) || 
+        (p.marca && p.marca.toLowerCase().includes(busq)) ||
+        (p.color && p.color.toLowerCase().includes(busq))
+    );
+    
+    if (filtrados.length === 0) { cont.innerHTML = ''; vacio.style.display = 'block'; return; }
+    vacio.style.display = 'none';
+    
+    cont.innerHTML = filtrados.map(p => {
+        const agotado = p.stock <= 0;
+        return `
+        <div class="producto ${p.categoria} ${agotado ? 'agotado' : ''}">
+            <h4>${p.nombre}</h4>
+            <p style="font-size:12px; color:#555;">${p.marca || 'Sin marca'} — ${p.color || 'Sin color'}</p>
+            <p><strong>$${p.precio.toFixed(2)}</strong></p>
+            <p class="${p.stock <= 3 ? 'agotado' : ''}">Stock: ${p.stock}</p>
+            <div style="margin:5px 0;">${p.tallas.map(t => `<span class="talla-badge">${t.talla}:${t.stock}</span>`).join('')}</div>
+            <button class="btn-agregar" onclick="abrirModalCantidad(${p.id})" ${agotado ? 'disabled style=opacity:0.5' : ''}>➕ Agregar</button>
+        </div>`;
+    }).join('');
+}
+
+function filtrarProductos() {
+    cargarProductos();
+}
+
+// === MODAL TALLA/CANTIDAD ===
+function abrirModalCantidad(id) {
+    prodActual = productos.find(p => p.id === id);
+    if (!prodActual || prodActual.stock <= 0) return;
+
+    document.getElementById('prod-nombre').textContent = prodActual.nombre;
+    document.getElementById('prod-marca').textContent = `${prodActual.marca || 'Sin marca'} — ${prodActual.color || 'Sin color'}`;
+    document.getElementById('prod-color').textContent = '';
+    document.getElementById('prod-precio').textContent = prodActual.precio.toFixed(2);
+    document.getElementById('prod-stock').textContent = prodActual.stock;
+    
+    const selectTalla = document.getElementById('prod-talla');
+    selectTalla.innerHTML = '<option value="">Selecciona talla</option>' + 
+        prodActual.tallas.map(t => `<option value="${t.talla}" data-stock="${t.stock}" ${t.stock===0?'disabled':''}>${t.talla} (Disp: ${t.stock})</option>`).join('');
+    
+    document.getElementById('cantidad-ingresada').value = '';
+    document.getElementById('subtotal-calculado').textContent = '0.00';
+    document.getElementById('modal-cantidad').classList.add('activo');
+}
+
+function cerrarModalCantidad() {
+    document.getElementById('modal-cantidad').classList.remove('activo');
+    prodActual = null;
+}
+
+function actualizarStockTalla() {
+    const tallaSel = document.getElementById('prod-talla').value;
+    if (!tallaSel || !prodActual) return;
+    const talla = prodActual.tallas.find(t => t.talla === tallaSel);
+    document.getElementById('prod-stock').textContent = talla ? talla.stock : 0;
+    calcularSubtotal();
+}
+
+function calcularSubtotal() {
+    const c = parseInt(document.getElementById('cantidad-ingresada').value) || 0;
+    if (prodActual && c
+    const c = parseInt(document.getElementById('cantidad-ingresada').value) || 0;
+    const tallaSel = document.getElementById('prod-talla').value;
+    const talla = prodActual.tallas.find(t => t.talla === tallaSel);
+    const disp = talla ? talla.stock : 0;
+    
+    if (prodActual && c > 0 && tallaSel && disp > 0) {
+        document.getElementById('subtotal-calculado').textContent = (prodActual.precio * Math.min(c, disp)).toFixed(2);
+    } else {
+        document.getElementById('subtotal-calculado').textContent = '0.00';
+    }
+}
+
+function confirmarAgregar() {
+    const c = parseInt(document.getElementById('cantidad-ingresada').value);
+    const tallaSel = document.getElementById('prod-talla').value;
+    const talla = prodActual.tallas.find(t => t.talla === tallaSel);
+    
+    if (!prodActual || !c || c < 1 || !tallaSel) { 
+        alert('⚠️ Selecciona talla y cantidad válidas'); 
+        return; 
+    }
+    if (!talla || c > talla.stock) { 
+        alert(`⚠️ Solo hay ${talla ? talla.stock : 0} disponibles en talla ${tallaSel}`); 
+        return; 
+    }
+
+    const claveItem = `${prodActual.id}-${tallaSel}`;
+    const existe = carrito.find(i => i.clave === claveItem);
+    
+    if (existe) {
+        existe.cantidad += c;
+        talla.stock -= c;
+    } else {
+        carrito.push({ 
+            clave: claveItem,
+            id: prodActual.id,
+            nombre: prodActual.nombre,
+            marca: prodActual.marca,
+            color: prodActual.color,
+            talla: tallaSel,
+            precio: prodActual.precio,
+            cantidad: c
+        });
+        talla.stock -= c;
+    }
+    
+    prodActual.stock = prodActual.tallas.reduce((s, t) => s + t.stock, 0);
+    localStorage.setItem('productosRopa', JSON.stringify(productos));
+    cerrarModalCantidad();
+    actualizarCarrito();
+    cargarProductos();
+}
+
+// === CARRITO ===
+function actualizarCarrito() {
+    const cont = document.getElementById('items-carrito');
+    const vacio = document.getElementById('carrito-vacio');
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    
+    if (carrito.length === 0) {
+        cont.innerHTML = ''; 
+        vacio.style.display = 'block';
+        document.getElementById('total').textContent = '0.00';
+        return;
+    }
+    vacio.style.display = 'none';
+    cont.innerHTML = carrito.map(i => `
+        <div class="carrito-item">
+            <div><strong>${i.nombre}</strong><br>
+            <small>${i.marca || ''} — ${i.color || ''} — Talla: ${i.talla} × ${i.cantidad}</small></div>
+            <div>$${(i.precio*i.cantidad).toFixed(2)}
+                <button class="btn-quitar" onclick="quitarDelCarrito('${i.clave}')">×</button>
+            </div>
+        </div>`).join('');
+    document.getElementById('total').textContent = total.toFixed(2);
+}
+
+function quitarDelCarrito(clave) {
+    const idx = carrito.findIndex(i => i.clave === clave);
+    if (idx !== -1) {
+        const item = carrito[idx];
+        const prod = productos.find(p => p.id === item.id);
+        if (prod) {
+            const talla = prod.tallas.find(t => t.talla === item.talla);
+            if (talla) talla.stock += item.cantidad;
+            prod.stock = prod.tallas.reduce((s, t) => s + t.stock, 0);
+        }
+        carrito.splice(idx, 1);
+        localStorage.setItem('productosRopa', JSON.stringify(productos));
+        actualizarCarrito();
+        cargarProductos();
+    }
+}
+
+function limpiarCarrito() {
+    carrito.forEach(item => {
+        const prod = productos.find(p => p.id === item.id);
+        if (prod) {
+            const talla = prod.tallas.find(t => t.talla === item.talla);
+            if (talla) talla.stock += item.cantidad;
+            prod.stock = prod.tallas.reduce((s, t) => s + t.stock, 0);
+        }
+    });
+    carrito = [];
+    localStorage.setItem('productosRopa', JSON.stringify(productos));
+    actualizarCarrito();
+    cargarProductos();
+}
+
+// === PAGO ===
+function abrirModalPago() {
+    if (carrito.length === 0) { alert('⚠️ El carrito está vacío'); return; }
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    document.getElementById('modal-total').textContent = total.toFixed(2);
+    document.getElementById('pago-recibido').value = '';
+    document.getElementById('pago-cambio').textContent = '0.00';
+    document.getElementById('modal-pago').classList.add('activo');
+}
+
+function cerrarModalPago() {
+    document.getElementById('modal-pago').classList.remove('activo');
+}
+
+function calcularCambio() {
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const recibido = parseFloat(document.getElementById('pago-recibido').value) || 0;
+    document.getElementById('pago-cambio').textContent = Math.max(0, recibido - total).toFixed(2);
+}
+
+function confirmarVenta() {
+    const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const recibido = parseFloat(document.getElementById('pago-recibido').value) || 0;
+    
+    if (recibido < total) { alert('⚠️ El monto es insuficiente'); return; }
+
+    const venta = {
+        id: Date.now(),
+        fecha: new Date().toLocaleString('es-MX'),
+        cajero: usuarioActivo.nombre,
+        items: [...carrito],
+        total,
+        recibido,
+        cambio: recibido - total
+    };
+    
+    ventas.unshift(venta);
+    localStorage.setItem('ventasRopa', JSON.stringify(ventas));
+    
+    // Ticket
+    document.getElementById('ticket').style.display = 'block';
+    document.getElementById('t-num').textContent = venta.id;
+    document.getElementById('t-fecha').textContent = venta.fecha;
+    document.getElementById('t-cajero').textContent = venta.cajero;
+    document.getElementById('t-items').innerHTML = carrito.map(i => 
+        `<div class="fila-ticket">
+            <span>${i.nombre} — Talla ${i.talla} × ${i.cantidad}</span>
+            <span>$${(i.precio * i.cantidad).toFixed(2)}</span>
+        </div>`
+    ).join('');
+    document.getElementById('t-total').textContent = venta.total.toFixed(2);
+    document.getElementById('t-pago').textContent = venta.recibido.toFixed(2);
+    document.getElementById('t-cambio').textContent = venta.cambio.toFixed(2);
+
+    cerrarModalPago();
+    carrito = [];
+    actualizarCarrito();
+    actualizarCaja();
+}
+
+// === HISTORIAL ===
+function cargarHistorial(lista = ventas) {
+    const vacio = document.getElementById('historial-vacio');
+    const tabla = document.getElementById('tabla-historial');
+    const cuerpo = document.getElementById('cuerpo-historial');
+
+    if (lista.length === 0) {
+        vacio.style.display = 'block';
+        tabla.style.display = 'none';
+        return;
+    }
+    vacio.style.display = 'none';
+    tabla.style.display = 'table';
+    cuerpo.innerHTML = lista.map(v => `
+        <tr>
+            <td>${v.id}</td>
+            <td>${v.fecha}</td>
+            <td>${v.cajero}</td>
+            <td>$${v.total.toFixed(2)}</td>
+            <td><button class="btn-agregar" onclick="verDetalle(${v.id})">Ver</button></td>
+        </tr>
+    `).join('');
+}
+
+function filtrarHistorial() {
+    const desde = document.getElementById('fecha-desde').value;
+    const hasta = document.getElementById('fecha-hasta').value;
+    if (!desde || !hasta) { alert('Selecciona ambas fechas'); return; }
+
+    const filtrados = ventas.filter(v => {
+        const f = new Date(v.fecha.split('/').reverse().join('-').replace(' ', 'T'));
+        return new Date(desde) <= f && f <= new Date(hasta + 'T23:59:59');
+    });
+    cargarHistorial(filtrados);
+}
+
+function verTodoHistorial() {
+    document.getElementById('fecha-desde').value = '';
+    document.getElementById('fecha-hasta').value = '';
+    cargarHistorial();
+}
+
+function verDetalle(id) {
+    const venta = ventas.find(v => v.id === id);
+    if (!venta) return;
+    
+    let detalle = `=== TICKET Nº ${venta.id} ===\nFecha: ${venta.fecha}\nVendedor: ${venta.cajero}\n\n--- Productos ---\n`;
+    venta.items.forEach(i => {
+        detalle += `${i.nombre} — Talla ${i.talla} × ${i.cantidad} — $${(i.precio * i.cantidad).toFixed(2)}\n`;
+    });
+    detalle += `\nTOTAL: $${venta.total.toFixed(2)}\nPagó: $${venta.recibido.toFixed(2)}\nCambio: $${venta.cambio.toFixed(2)}`;
+    alert(detalle);
+}
+
+// === CAJA ===
+function actualizarCaja() {
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const vhoy = ventas.filter(v => v.fecha.includes(hoy));
+    document.getElementById('caja-ventas').textContent = vhoy.length;
+    document.getElementById('caja-total').textContent = `$${vhoy.reduce((s, v) => s + v.total, 0).toFixed(2)}`;
+    document.getElementById('caja-fecha').textContent = hoy;
+}
+
+function cerrarCaja() {
+    if (!confirm('¿Seguro de cerrar la caja?')) return;
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const vhoy = ventas.filter(v => v.fecha.includes(hoy));
+    const total = vhoy.reduce((s, v) => s + v.total, 0);
+
+    let rep = `=== CIERRE DE CAJA — TIENDA DE ROPA ===\nFecha: ${hoy}\nVentas: ${vhoy.length}\nTOTAL: $${total.toFixed(2)}\n\nDetalle:\n`;
+    vhoy.forEach(v => rep += `Ticket ${v.id} — $${v.total.toFixed(2)}\n`);
+    alert(rep);
+}
+
+function exportarReporte() {
+    const hoy = new Date().toLocaleDateString('es-MX');
+    const vhoy = ventas.filter(v => v.fecha.includes(hoy));
+    const total = vhoy.reduce((s, v) => s + v.total, 0);
+
+    let txt = `CIERRE DE CAJA - ROPA Y ACCESORIOS\nFecha: ${hoy}\nVentas: ${vhoy.length}\nTotal: $${total.toFixed(2)}\n\nDetalle:\n`;
+    vhoy.forEach(v => txt += `${v.id}, ${v.fecha}, ${v.cajero}, $${v.total.toFixed(2)}\n`);
+
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `cierre-ropa-${hoy.replaceAll('/', '-')}.txt`;
+    a.click();
+}
+
+// === INVENTARIO ===
+function cargarInventario(lista = productos) {
+    const cuerpo = document.getElementById('inv-cuerpo');
+    cuerpo.innerHTML = lista.map(p => `
+        <tr class="${p.stock <= 3 ? 'agotado' : ''}">
+            <td><strong>${p.nombre}</strong></td>
+            <td>${p.marca || '-'}<br><small>${p.color || '-'}</small></td>
+            <td>${p.categoria}</td>
+            <td>$${p.precio.toFixed(2)}</td>
+            <td>${p.tallas.map(t => `<span class="talla-badge">${t.talla}:${t.stock}</span>`).join('')}<br><strong>Total: ${p.stock}</strong></td>
+            <td><button class="btn-quitar" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
+        </tr>`).join('');
+}
+
+function filtrarInventario() {
+    const b = document.getElementById('buscar-inv').value.toLowerCase();
+    cargarInventario(productos.filter(p => 
+        p.nombre.toLowerCase().includes(b) || 
+        (p.marca && p.marca.toLowerCase().includes(b)) ||
+        (p.color && p.color.toLowerCase().includes(b))
+    ));
+}
+
+function eliminarProducto(id) {
+    if (!confirm('¿Eliminar esta prenda?')) return;
+    productos = productos.filter(p => p.id !== id);
+    localStorage.setItem('productosRopa', JSON.stringify(productos));
+    cargarInventario();
+    cargarProductos();
+}
+
+// === ALERTAS ===
+function cargarAlertas() {
+    const bajoStock = productos.filter(p => p.stock <= 3 && p.stock > 0);
+    const tallasBajas = [];
+    productos.forEach(p => {
+        p.tallas.forEach(t => {
+            if (t.stock <= 3 && t.stock > 0) {
+                tallasBajas.push(`${p.nombre} — Talla ${t.talla}: ${t.stock} u.`);
+            }
+        });
+    });
+
+    document.getElementById('alert-stock').innerHTML = bajoStock.length === 0 
+        ? '✅ Sin productos con stock bajo' 
+        : bajoStock.map(p => `<p>${p.nombre} — Stock total: ${p.stock}</p>`).join('');
+
+    document.getElementById('alert-tallas').innerHTML = tallasBajas.length === 0 
+        ? '✅ Sin tallas con stock mínimo' 
+        : tallasBajas.map(t => `<p>${t}</p>`).join('');
+}
+
+// === INICIO ===
+window.onload = function() {
+    if (usuarioActivo) {
+        document.getElementById('pantalla-login').classList.add('oculto');
+        document.getElementById('sistema').classList.remove('oculto');
+        document.getElementById('nombre-usuario').textContent = usuarioActivo.nombre;
+        cargarProductos();
+        actualizarCaja();
+    }
+};
+</script>
+
+</body>
+</html>
